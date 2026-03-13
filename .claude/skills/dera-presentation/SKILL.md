@@ -8,11 +8,94 @@ Dont make boring slides. Make insights pop with clear action titles, varied layo
 ## Workflow
 
 ```
-1. STRATEGY    → Read styling.md, detect mode, draft ghost deck with action titels and layout
-2. Brainstorm  → Discuss with user, share your thought and take user feedback on the ghost deck
-3. EXECUTE     → Generate via pptxgenjs (see pptxgenjs.md)
-4. QA          → Visual inspection via subagent (see qa.md)
+0. DEPENDENCIES → Verify & install all required tools BEFORE anything else
+1. STRATEGY     → Read styling.md, detect mode, draft ghost deck with action titles and layout
+2. BRAINSTORM   → Discuss with user, share your thoughts and take user feedback on the ghost deck
+3. EXECUTE      → Generate via pptxgenjs (see pptxgenjs.md)
+4. QA           → Visual inspection via subagent (see qa.md)
 ```
+
+---
+
+## Step 0: Dependency Check (MANDATORY — run first, every time)
+
+Before any strategy or code work, verify the environment is ready. Skipping this step is the #1 cause of mid-workflow failures.
+
+### Resolve project root
+
+All paths below are relative to the **project root** (the directory containing `package.json`). Determine it once and use absolute paths throughout:
+
+```bash
+# Find the project root (directory containing package.json)
+PROJECT_ROOT="$(cd "$(dirname "$(find . -maxdepth 3 -name package.json -path '*/dera-pm-agent/*' | head -1)")" && pwd)"
+# If running from the project already:
+PROJECT_ROOT="$(pwd)"
+SKILL_DIR="$PROJECT_ROOT/.claude/skills/dera-presentation"
+```
+
+### Node.js dependencies
+
+```bash
+# 1. Check node exists
+node --version || { echo "BLOCKER: Node.js not installed"; exit 1; }
+
+# 2. Install project packages (pptxgenjs, react-icons, sharp, etc.)
+if [ ! -d "$PROJECT_ROOT/node_modules/pptxgenjs" ]; then
+  echo "Installing Node dependencies..."
+  cd "$PROJECT_ROOT" && npm install
+fi
+
+# 3. Verify the critical package loads
+node -e "require('pptxgenjs')" 2>/dev/null || {
+  echo "pptxgenjs not found — running npm install..."
+  cd "$PROJECT_ROOT" && npm install
+}
+```
+
+**NODE_PATH**: Only needed when packages are installed globally. When using the project's `node_modules`, run scripts from the project root and `require()` resolves automatically. If you must use global packages:
+
+```bash
+# Auto-detect global node_modules (works on ARM Mac, Intel Mac, Linux)
+NODE_PATH="$(npm root -g)" node generate_slides.js
+```
+
+### Python dependencies
+
+```bash
+# Install QA tools (markitdown for content extraction, Pillow for thumbnails)
+pip install "markitdown[pptx]" Pillow defusedxml 2>/dev/null
+
+# Verify
+python -c "import markitdown" 2>/dev/null || { echo "BLOCKER: markitdown not installed"; }
+```
+
+### System dependencies (QA phase)
+
+These are only needed for visual QA. Check early so you can warn the user:
+
+```bash
+# LibreOffice — converts PPTX to PDF
+command -v soffice >/dev/null 2>&1 || echo "WARNING: LibreOffice not found — visual QA will be limited. Install: brew install --cask libreoffice"
+
+# Poppler — converts PDF to images
+command -v pdftoppm >/dev/null 2>&1 || echo "WARNING: pdftoppm not found — install: brew install poppler"
+```
+
+If either is missing, flag it to the user now (not during QA when slides are already generated). Visual QA can still proceed by opening the .pptx file directly, but automated image conversion won't work.
+
+### Quick dependency checklist
+
+| Dependency | Required for | Check command | Install |
+|-----------|-------------|---------------|---------|
+| Node.js | Slide generation | `node --version` | [nodejs.org](https://nodejs.org) |
+| pptxgenjs | Slide generation | `node -e "require('pptxgenjs')"` | `npm install` (project root) |
+| react-icons + sharp | Icons in slides | `node -e "require('react-icons/fa')"` | `npm install` (project root) |
+| markitdown | Content QA | `python -m markitdown --help` | `pip install "markitdown[pptx]"` |
+| LibreOffice | Visual QA (PPTX→PDF) | `command -v soffice` | `brew install --cask libreoffice` |
+| Poppler | Visual QA (PDF→images) | `command -v pdftoppm` | `brew install poppler` |
+| Pillow | Thumbnail grids | `python -c "import PIL"` | `pip install Pillow` |
+
+**Do NOT proceed to Step 1 until all "Required for: Slide generation" dependencies pass.** QA dependencies can be warnings.
 
 ---
 
@@ -21,8 +104,8 @@ Dont make boring slides. Make insights pop with clear action titles, varied layo
 ### Load Project Styling
 
 ```bash
-# Always read first
-cat styling.md
+# Always read the styling guide first (use absolute path from Step 0)
+cat "$SKILL_DIR/styling.md"
 ```
 
 Extract: colors, fonts, margins, footer elements.
@@ -58,11 +141,19 @@ Read [pptxgenjs.md](pptxgenjs.md) for the full API reference.
 
 ### Environment
 
-When running Node.js scripts, always set `NODE_PATH` so globally installed packages resolve correctly:
+Run scripts from the **project root** so `require()` resolves from `node_modules/`:
 
 ```bash
-NODE_PATH=/opt/homebrew/lib/node_modules node generate_slides.js
+cd "$PROJECT_ROOT" && node generate_slides.js
 ```
+
+If packages are installed globally instead of locally, auto-detect the path:
+
+```bash
+NODE_PATH="$(npm root -g)" node generate_slides.js
+```
+
+**Never hardcode** `/opt/homebrew/lib/node_modules` — it only works on ARM Macs.
 
 ### Quick Start
 
@@ -128,8 +219,8 @@ Read [qa.md](qa.md) for the full process.
 ### Quick Version
 
 ```bash
-# Convert to images
-python scripts/office/soffice.py --headless --convert-to pdf output.pptx
+# Convert to images (use absolute path from Step 0)
+python "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
 

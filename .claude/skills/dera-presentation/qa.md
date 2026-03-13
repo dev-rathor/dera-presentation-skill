@@ -85,8 +85,29 @@ pdftoppm -jpeg -r 150 -f N -l N output.pdf slide-fixed
 
 # Dependencies
 
-- `pip install "markitdown[pptx]"` - text extraction
-- `pip install Pillow` - thumbnail grids
-- `npm install -g pptxgenjs` - creating from scratch
-- LibreOffice (`soffice`) - PDF conversion (auto-configured for sandboxed environments via `scripts/office/soffice.py`)
-- Poppler (`pdftoppm`) - PDF to images
+**These should already be installed by Step 0 in SKILL.md.** If you skipped Step 0, go back and run it now.
+
+### Python (installed via pip)
+- `pip install "markitdown[pptx]"` — text extraction for content QA
+- `pip install Pillow` — thumbnail grids
+- `pip install defusedxml` — safe XML parsing for thumbnail script
+
+### Node.js (installed via npm install in project root)
+- `pptxgenjs` — slide generation
+- `react-icons`, `react`, `react-dom`, `sharp` — icon rendering
+
+### System tools
+- **LibreOffice** (`soffice`) — PPTX→PDF conversion. Auto-configured for sandboxed environments via `scripts/office/soffice.py`. Install: `brew install --cask libreoffice`
+- **Poppler** (`pdftoppm`) — PDF→image conversion. Install: `brew install poppler`
+
+### Pre-QA verification
+
+Before running any QA commands, verify tools are available:
+
+```bash
+python -m markitdown --help >/dev/null 2>&1 || echo "MISSING: pip install 'markitdown[pptx]'"
+command -v soffice >/dev/null 2>&1 || echo "MISSING: brew install --cask libreoffice"
+command -v pdftoppm >/dev/null 2>&1 || echo "MISSING: brew install poppler"
+```
+
+If visual QA tools are missing, tell the user and offer to QA by opening the .pptx directly.

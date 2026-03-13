@@ -235,7 +235,7 @@ slide.addImage({
 
 ### Icon Libraries
 
-Install: `npm install -g react-icons react react-dom sharp`
+Install: `npm install` in the project root (all icon deps are in `package.json`)
 
 Popular icon sets in react-icons:
 - `react-icons/fa` - Font Awesome
