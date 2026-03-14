@@ -19,83 +19,15 @@ Dont make boring slides. Make insights pop with clear action titles, varied layo
 
 ## Step 0: Dependency Check (MANDATORY — run first, every time)
 
-Before any strategy or code work, verify the environment is ready. Skipping this step is the #1 cause of mid-workflow failures.
-
-### Resolve project root
-
-All paths below are relative to the **project root** (the directory containing `package.json`). Determine it once and use absolute paths throughout:
-
 ```bash
-# Find the project root (directory containing package.json)
-PROJECT_ROOT="$(cd "$(dirname "$(find . -maxdepth 3 -name package.json -path '*/dera-pm-agent/*' | head -1)")" && pwd)"
-# If running from the project already:
 PROJECT_ROOT="$(pwd)"
 SKILL_DIR="$PROJECT_ROOT/.claude/skills/dera-presentation"
+bash "$SKILL_DIR/scripts/check_deps.sh"
 ```
 
-### Node.js dependencies
+The script checks Node.js, pptxgenjs, react-icons, sharp, markitdown, LibreOffice, and poppler. It prints PASS/FAIL for each and exits non-zero if any required dependency is missing. If it reports a blocker, fix it before continuing. Warnings (QA tools) are non-blocking.
 
-```bash
-# 1. Check node exists
-node --version || { echo "BLOCKER: Node.js not installed"; exit 1; }
-
-# 2. Install project packages (pptxgenjs, react-icons, sharp, etc.)
-if [ ! -d "$PROJECT_ROOT/node_modules/pptxgenjs" ]; then
-  echo "Installing Node dependencies..."
-  cd "$PROJECT_ROOT" && npm install
-fi
-
-# 3. Verify the critical package loads
-node -e "require('pptxgenjs')" 2>/dev/null || {
-  echo "pptxgenjs not found — running npm install..."
-  cd "$PROJECT_ROOT" && npm install
-}
-```
-
-**NODE_PATH**: Only needed when packages are installed globally. When using the project's `node_modules`, run scripts from the project root and `require()` resolves automatically. If you must use global packages:
-
-```bash
-# Auto-detect global node_modules (works on ARM Mac, Intel Mac, Linux)
-NODE_PATH="$(npm root -g)" node generate_slides.js
-```
-
-### Python dependencies
-
-```bash
-# Install QA tools (markitdown for content extraction, Pillow for thumbnails)
-pip install "markitdown[pptx]" Pillow defusedxml 2>/dev/null
-
-# Verify
-python -c "import markitdown" 2>/dev/null || { echo "BLOCKER: markitdown not installed"; }
-```
-
-### System dependencies (QA phase)
-
-These are only needed for visual QA. Check early so you can warn the user:
-
-```bash
-# LibreOffice — converts PPTX to PDF
-command -v soffice >/dev/null 2>&1 || echo "WARNING: LibreOffice not found — visual QA will be limited. Install: brew install --cask libreoffice"
-
-# Poppler — converts PDF to images
-command -v pdftoppm >/dev/null 2>&1 || echo "WARNING: pdftoppm not found — install: brew install poppler"
-```
-
-If either is missing, flag it to the user now (not during QA when slides are already generated). Visual QA can still proceed by opening the .pptx file directly, but automated image conversion won't work.
-
-### Quick dependency checklist
-
-| Dependency | Required for | Check command | Install |
-|-----------|-------------|---------------|---------|
-| Node.js | Slide generation | `node --version` | [nodejs.org](https://nodejs.org) |
-| pptxgenjs | Slide generation | `node -e "require('pptxgenjs')"` | `npm install` (project root) |
-| react-icons + sharp | Icons in slides | `node -e "require('react-icons/fa')"` | `npm install` (project root) |
-| markitdown | Content QA | `python -m markitdown --help` | `pip install "markitdown[pptx]"` |
-| LibreOffice | Visual QA (PPTX→PDF) | `command -v soffice` | `brew install --cask libreoffice` |
-| Poppler | Visual QA (PDF→images) | `command -v pdftoppm` | `brew install poppler` |
-| Pillow | Thumbnail grids | `python -c "import PIL"` | `pip install Pillow` |
-
-**Do NOT proceed to Step 1 until all "Required for: Slide generation" dependencies pass.** QA dependencies can be warnings.
+**NODE_PATH**: When using the project's `node_modules`, run scripts from the project root and `require()` resolves automatically. For global packages: `NODE_PATH="$(npm root -g)" node generate_slides.js`
 
 ---
 
@@ -155,6 +87,26 @@ NODE_PATH="$(npm root -g)" node generate_slides.js
 
 **Never hardcode** `/opt/homebrew/lib/node_modules` — it only works on ARM Macs.
 
+### Chunked Generation (MANDATORY for 6+ slides)
+
+Writing all slides in a single file write **will time out** for decks with 6+ slides. The generated JavaScript is too large for a single LLM output. Always split generation into chunks:
+
+**Chunk strategy:**
+
+1. **Chunk 1 — Boilerplate + slides 1–5:** Write the file with imports, color constants, icon pre-rendering, and the first 5 slides. End the `main()` function with `writeFile()`.
+2. **Run and verify** — Execute `node generate_slides.js` to confirm it works. Briefly message the user: *"First 5 slides generated successfully. Adding remaining slides now."*
+3. **Chunk 2 — slides 6–N:** Edit the file to add the remaining slides before the `writeFile()` call. Do NOT rewrite the entire file — use the Edit tool to insert new slides.
+4. **Run and verify** — Execute again and confirm all slides render.
+
+**Rules:**
+- **Max ~5 slides per write/edit operation.** Each slide is 15–30 lines of code. 5 slides ≈ 100–150 lines, which is safe.
+- **Always ping the user between chunks** with a brief status update. This prevents the appearance of a hang and resets the response timeout.
+- **Use Edit (not Write) for chunk 2+.** Insert new slide code before the `writeFile()` line. This is faster and avoids rewriting the entire file.
+- For very large decks (15+ slides), use 3 chunks: slides 1–5, 6–10, 11–N.
+
+**Example ping message between chunks:**
+> "Slides 1–5 generated and verified. Adding slides 6–10 now."
+
 ### Quick Start
 
 ```javascript
@@ -174,7 +126,7 @@ let slide = pres.addSlide();
 slide.background = { color: COLORS.background };
 
 // Action title (sentence, not topic)
-slide.addText("MoneyLion AI reduces personalization noise by 50%", {
+slide.addText("Our new pipeline reduced processing time by 40%", {
   x: 0.5, y: 0.3, w: 12.3, h: 0.8,
   fontSize: 28, fontFace: "Calibri", bold: true,
   color: COLORS.primary
@@ -202,7 +154,6 @@ pres.writeFile({ fileName: "output.pptx" });
 
 - **Don't repeat the same layout** — vary columns, cards, and callouts across slides
 - **Don't center body text** — left-align paragraphs and lists; center only titles
-- **Don't default to blue** — pick colors that reflect the specific topic
 - **Don't mix spacing randomly** — choose 0.3" or 0.5" gaps and use consistently
 - **Don't style one slide and leave the rest plain** — commit fully or keep it simple throughout
 - **Don't create text-only slides** — add images, icons, charts, or visual elements; avoid plain title + bullets
