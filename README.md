@@ -61,9 +61,32 @@ In Claude Code, invoke the skill:
 
 Or just describe what you need — Claude will detect presentation intent and use the skill automatically.
 
+## Verify It Works
+
+After installing, paste these two prompts into Claude Code to confirm everything is working.
+
+**1. Check dependencies**
+
+```
+Check all dependencies for the dera-presentation skill. Run the dependency
+check script at .claude/skills/dera-presentation/scripts/check_deps.sh and
+tell me what's installed and what's missing.
+```
+
+You'll see PASS/FAIL for each dependency. Install anything marked FAIL before continuing.
+
+**2. Test with a sample slide**
+
+```
+Create a 3-slide sample presentation to test that the presentation skill
+is working. Topic: Q3 priorities overview. Save to output/presentations/.
+```
+
+If a `.pptx` file appears and opens cleanly in PowerPoint or Keynote, you're good.
+
 ## Customization
 
-Edit `.claude/skills/dera-presentation/styling.md` (or `styling2.md`) to match your brand colors, fonts, and layout grid. The skill reads these files before generating any slides.
+Edit `.claude/skills/dera-presentation/styling.md` to match your brand colors, fonts, and layout grid. The skill reads this file before generating any slides.
 
 ## Files
 
@@ -74,6 +97,5 @@ Edit `.claude/skills/dera-presentation/styling.md` (or `styling2.md`) to match y
 | `pptxgenjs.md` | Full pptxgenjs API reference with icons and charts |
 | `qa.md` | 3-phase QA process (content, visual, verification loop) |
 | `styling.md` | Brand colors, fonts, layout specs |
-| `styling2.md` | Extended styling guide with typography scale and spacing |
 | `scripts/office/soffice.py` | LibreOffice wrapper for sandboxed environments |
 | `scripts/thumbnail.py` | Thumbnail grid generator for visual QA |
