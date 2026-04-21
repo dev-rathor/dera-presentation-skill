@@ -13,19 +13,22 @@ A Claude Code skill that generates professional PowerPoint presentations using p
 
 ### Option A: Project-level (one repo)
 
-Copy the skill folder into your project:
+Clone the repo and copy it into your project's skills directory:
 
 ```bash
-cp -r .claude/skills/dera-presentation /path/to/your-project/.claude/skills/
+git clone https://github.com/dev-rathor/dera-presentation-skill.git
+mkdir -p /path/to/your-project/.claude/skills/dera-presentation
+cp -r dera-presentation-skill/* /path/to/your-project/.claude/skills/dera-presentation/
 ```
 
 ### Option B: User-level (all projects)
 
-Copy to your personal Claude skills directory:
+Install to your personal Claude skills directory so it's available everywhere:
 
 ```bash
-mkdir -p ~/.claude/skills
-cp -r .claude/skills/dera-presentation ~/.claude/skills/
+git clone https://github.com/dev-rathor/dera-presentation-skill.git
+mkdir -p ~/.claude/skills/dera-presentation
+cp -r dera-presentation-skill/* ~/.claude/skills/dera-presentation/
 ```
 
 ### Dependencies
@@ -36,7 +39,7 @@ Install the required npm and Python packages:
 # Slide generation
 npm install -g pptxgenjs
 
-# Icons (optional — needed for icon-rich slides)
+# Icons and rendering (required)
 npm install -g react-icons react react-dom sharp
 
 # QA: text extraction
@@ -96,6 +99,7 @@ Edit `.claude/skills/dera-presentation/styling.md` to match your brand colors, f
 | `strategy.md` | Presentation modes, action title rules, anti-patterns |
 | `pptxgenjs.md` | Full pptxgenjs API reference with icons and charts |
 | `qa.md` | 3-phase QA process (content, visual, verification loop) |
-| `styling.md` | Brand colors, fonts, layout specs |
+| `styling.md` | Brand colors and styling specs |
+| `scripts/check_deps.sh` | Dependency checker (PASS/FAIL for each requirement) |
 | `scripts/office/soffice.py` | LibreOffice wrapper for sandboxed environments |
 | `scripts/thumbnail.py` | Thumbnail grid generator for visual QA |

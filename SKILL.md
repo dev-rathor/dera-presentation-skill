@@ -40,7 +40,7 @@ The script checks Node.js, pptxgenjs, react-icons, sharp, markitdown, LibreOffic
 cat "$SKILL_DIR/styling.md"
 ```
 
-Extract: colors, fonts, margins, footer elements.
+Extract: color palette and any styling specs defined.
 
 ### Detect Presentation Mode
 
@@ -67,7 +67,26 @@ Write slide titles ONLY. Read them aloud:
 
 ---
 
-## Step 2: Execute
+## Step 2: Brainstorm
+
+Present the ghost deck to the user. Share your reasoning on mode choice, slide flow, and any tradeoffs you made.
+
+**What to show the user:**
+- The full list of slide titles (numbered)
+- Which mode you detected and why
+- Any slides you considered but cut
+
+**Collect feedback before proceeding.** The user may want to:
+- Reorder slides
+- Add or remove topics
+- Reword titles to better match their message
+- Change the mode or audience
+
+Iterate on the ghost deck until the user approves. Do not auto-approve — wait for explicit confirmation.
+
+---
+
+## Step 3: Execute
 
 Read [pptxgenjs.md](pptxgenjs.md) for the full API reference.
 
@@ -164,7 +183,7 @@ pres.writeFile({ fileName: "output.pptx" });
 
 ---
 
-## Step 3: QA
+## Step 4: QA
 
 Read [qa.md](qa.md) for the full process.
 
@@ -199,4 +218,4 @@ Visually inspect these slides. Find issues:
 | [strategy.md](strategy.md) | Mode structures, action title rule, anti-patterns |
 | [pptxgenjs.md](pptxgenjs.md) | Full API reference, icons, charts, pitfalls |
 | [qa.md](qa.md) | 3-phase QA process |
-| `styling.md` (project root) | Brand colors, fonts, layout specs |
+| [styling.md](styling.md) | Brand colors and styling specs |
