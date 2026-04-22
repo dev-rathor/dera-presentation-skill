@@ -33,14 +33,15 @@ The script checks Node.js, pptxgenjs, react-icons, sharp, markitdown, LibreOffic
 
 ## Step 1: Before Writing Any Code
 
-### Load Project Styling
+### Load Project Styling and Reference
 
 ```bash
-# Always read the styling guide first (use absolute path from Step 0)
+# Always read styling and reference before writing any code
 cat "$SKILL_DIR/styling.md"
+cat "$SKILL_DIR/reference.md"
 ```
 
-Extract: color palette and any styling specs defined.
+`styling.md` has colors and typography. `reference.md` shows what a polished 13-slide deck looks like — study the slide-by-slide breakdown and reusable patterns before generating.
 
 ### Detect Presentation Mode
 
@@ -58,31 +59,29 @@ Read [strategy.md](strategy.md) and classify:
 
 ### Draft Ghost Deck
 
-Write slide titles ONLY. Read them aloud:
+For each slide, write the **action title** and **layout type**. Example:
+
+```
+1. "An AI agent can auto-resolve 60%+ of stuck transfers" — 4-column icon cards
+2. "One engineer spends every week manually resolving stuck transfers" — two-column (bullets + big number)
+3. "Deterministic workflows can't interpret free-form logs" — comparison columns (red vs. green)
+```
+
+**Quality check** — read titles in sequence:
 - Do they tell a complete story?
 - Is each title a sentence (not a topic label)?
 - Would someone understand the message from titles alone?
+- Do layouts vary slide to slide?
 
 **Do NOT proceed until ghost deck passes.**
 
 ---
 
-## Step 2: Brainstorm
+## Step 2: Brainstorm — Ghost Deck Review
 
-Present the ghost deck to the user. Share your reasoning on mode choice, slide flow, and any tradeoffs you made.
+Present the ghost deck (titles + layouts) to the user for approval.
 
-**What to show the user:**
-- The full list of slide titles (numbered)
-- Which mode you detected and why
-- Any slides you considered but cut
-
-**Collect feedback before proceeding.** The user may want to:
-- Reorder slides
-- Add or remove topics
-- Reword titles to better match their message
-- Change the mode or audience
-
-Iterate on the ghost deck until the user approves. Do not auto-approve — wait for explicit confirmation.
+**Do NOT proceed until the user confirms.** They may reorder, add, cut, or reword.
 
 ---
 
@@ -219,3 +218,4 @@ Visually inspect these slides. Find issues:
 | [pptxgenjs.md](pptxgenjs.md) | Full API reference, icons, charts, pitfalls |
 | [qa.md](qa.md) | 3-phase QA process |
 | [styling.md](styling.md) | Brand colors and styling specs |
+| [reference.md](reference.md) | What a polished deck looks like — slide-by-slide breakdown + reusable patterns |
