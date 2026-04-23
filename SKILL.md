@@ -59,13 +59,15 @@ Read [strategy.md](strategy.md) and classify:
 
 ### Draft Ghost Deck
 
-For each slide, write the **action title** and **layout type**. Example:
+For each slide, write the **action title** and **layout type** as a table. Example:
 
-```
-1. "An AI agent can auto-resolve 60%+ of stuck transfers" — 4-column icon cards
-2. "One engineer spends every week manually resolving stuck transfers" — two-column (bullets + big number)
-3. "Deterministic workflows can't interpret free-form logs" — comparison columns (red vs. green)
-```
+| # | Title | Layout |
+|---|-------|--------|
+| 1 | An AI agent can auto-resolve 60%+ of stuck transfers | 4-column icon cards |
+| 2 | One engineer spends every week manually resolving stuck transfers | Two-column: bullets + big number |
+| 3 | Deterministic workflows can't interpret free-form logs | Comparison columns (red vs. green) |
+
+This table is the contract. QA will check every slide against it.
 
 **Quality check** — read titles in sequence:
 - Do they tell a complete story?
@@ -186,25 +188,26 @@ pres.writeFile({ fileName: "output.pptx" });
 
 Read [qa.md](qa.md) for the full process.
 
-### Quick Version
+### Phase 1: Content QA
 
 ```bash
-# Convert to images (use absolute path from Step 0)
+python3 -m markitdown output.pptx
+```
+
+Check extracted text against the ghost deck table: slide count, titles match, layout types match, no placeholder text, no missing content.
+
+### Phase 2: Visual QA
+
+```bash
 python3 "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
 
-Then delegate to subagent:
+Delegate to subagent with the **ghost deck table included** in the prompt. The subagent checks each slide against 9 criteria: title, layout, variety, visual element, canvas fill, text size, contrast, overlap, alignment.
 
-```
-Visually inspect these slides. Find issues:
-- Overlapping elements
-- Text overflow
-- Low contrast
-- Misaligned elements
+### Phase 3: Fix and Verify
 
-[attach slide images]
-```
+Fix flagged issues → re-render → re-inspect. Max 3 cycles. Disclose any remaining issues.
 
 **Do not deliver until QA passes or issues are disclosed.**
 

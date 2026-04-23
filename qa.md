@@ -4,82 +4,91 @@
 
 Your first render is almost never correct. Approach QA as a bug hunt, not a confirmation step. If you found zero issues on first inspection, you weren't looking hard enough.
 
-## Content QA
+---
+
+## Phase 1: Content QA
+
+Extract text and check against the ghost deck:
 
 ```bash
 python3 -m markitdown output.pptx
 ```
 
-Check for missing content, typos, wrong order.
+**Check against ghost deck table:**
 
-**When using templates, check for leftover placeholder text:**
+| Check | How to verify |
+|-------|---------------|
+| Slide count matches | Count slides vs. ghost deck rows |
+| Titles match | Every slide title is the action sentence from the ghost deck — not a shortened or reworded version |
+| Layout matches | Each slide uses the layout type specified in the ghost deck |
+| No placeholder text | `grep -iE "xxxx\|lorem\|ipsum\|placeholder"` returns nothing |
+| No missing content | Every slide has body content, not just a title |
 
-```bash
-python3 -m markitdown output.pptx | grep -iE "xxxx|lorem|ipsum|this.*(page|slide).*layout"
-```
-
-If grep returns results, fix them before declaring success.
-
-## Visual QA
-
-**⚠️ USE SUBAGENTS** — even for 2-3 slides. You've been staring at the code and will see what you expect, not what's there. Subagents have fresh eyes.
-
-Convert slides to images (see [Converting to Images](#converting-to-images)), then use this prompt:
-
-```
-Visually inspect these slides. Assume there are issues — find them.
-
-Look for:
-- Overlapping elements (text through shapes, lines through words, stacked elements)
-- Text overflow or cut off at edges/box boundaries
-- Decorative lines positioned for single-line text but title wrapped to two lines
-- Source citations or footers colliding with content above
-- Elements too close (< 0.3" gaps) or cards/sections nearly touching
-- Uneven gaps (large empty area in one place, cramped in another)
-- Insufficient margin from slide edges (< 0.5")
-- Columns or similar elements not aligned consistently
-- Low-contrast text (e.g., light gray text on cream-colored background)
-- Low-contrast icons (e.g., dark icons on dark backgrounds without a contrasting circle)
-- Text boxes too narrow causing excessive wrapping
-- Leftover placeholder content
-
-For each slide, list issues or areas of concern, even if minor.
-
-Read and analyze these images:
-1. /path/to/slide-01.jpg (Expected: [brief description])
-2. /path/to/slide-02.jpg (Expected: [brief description])
-
-Report ALL issues found, including minor ones.
-```
-
-## Verification Loop
-
-1. Generate slides → Convert to images → Inspect
-2. **List issues found** (if none found, look again more critically)
-3. Fix issues
-4. **Re-verify affected slides** — one fix often creates another problem
-5. Repeat until a full pass reveals no new issues
-
-**Do not declare success until you've completed at least one fix-and-verify cycle.**
+**If any check fails, fix before proceeding to visual QA.**
 
 ---
 
-# Converting to Images
+## Phase 2: Visual QA
 
-Convert presentations to individual slide images for visual inspection:
+**⚠️ USE SUBAGENTS** — even for 2-3 slides. You've been staring at the code and will see what you expect, not what's there. Subagents have fresh eyes.
+
+### Convert to images
 
 ```bash
-python3 scripts/office/soffice.py --headless --convert-to pdf output.pptx
+python3 "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
 
-This creates `slide-01.jpg`, `slide-02.jpg`, etc.
+### Subagent prompt
 
-To re-render specific slides after fixes:
+Include the ghost deck table so the subagent knows what each slide should look like:
 
-```bash
-pdftoppm -jpeg -r 150 -f N -l N output.pdf slide-fixed
 ```
+Visually inspect these slides against the ghost deck spec below.
+
+GHOST DECK:
+[paste the ghost deck table here]
+
+For EACH slide, check:
+
+1. TITLE: Is it an action sentence (full insight), not a topic label?
+2. LAYOUT: Does it match the layout type in the ghost deck?
+3. VARIETY: Is this layout different from the previous slide?
+4. VISUAL ELEMENT: Does the slide have at least one non-text element (icon, shape, chart, big number)?
+5. CANVAS FILL: Is the bottom 30% of the slide empty? Content should fill the canvas.
+6. TEXT SIZE: Are all readable text elements 12pt or larger? (footer excluded)
+7. CONTRAST: Can you read all text clearly against its background?
+8. OVERLAP: Are any elements overlapping, cut off, or colliding?
+9. ALIGNMENT: Are similar elements (cards, columns) aligned consistently?
+
+For each slide, report:
+- PASS or FAIL per check
+- Specific issue description for any FAIL
+
+Read and analyze these images:
+1. slide-01.jpg (Expected: [slide 1 title + layout from ghost deck])
+2. slide-02.jpg (Expected: [slide 2 title + layout from ghost deck])
+...
+
+Be harsh. Report ALL issues, even minor ones.
+```
+
+---
+
+## Phase 3: Fix and Verify
+
+1. Fix every issue the subagent flagged
+2. Re-render affected slides:
+   ```bash
+   python3 "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
+   pdftoppm -jpeg -r 150 -f N -l N output.pdf slide-fixed
+   ```
+3. Re-inspect fixed slides (subagent or self-check)
+4. Repeat until a full pass has no new issues
+
+**Do not declare success until you've completed at least one fix-and-verify cycle.**
+
+**Max 3 cycles.** If issues persist after 3 rounds, disclose remaining issues to the user and deliver with known limitations listed.
 
 ---
 
@@ -92,22 +101,10 @@ pdftoppm -jpeg -r 150 -f N -l N output.pdf slide-fixed
 - `pip install Pillow` — thumbnail grids
 - `pip install defusedxml` — safe XML parsing for thumbnail script
 
-### Node.js (installed via npm install in project root)
-- `pptxgenjs` — slide generation
-- `react-icons`, `react`, `react-dom`, `sharp` — icon rendering
-
 ### System tools
-- **LibreOffice** (`soffice`) — PPTX→PDF conversion. Auto-configured for sandboxed environments via `scripts/office/soffice.py`. Install: `brew install --cask libreoffice`
+- **LibreOffice** (`soffice`) — PPTX→PDF conversion. Install: `brew install --cask libreoffice`
 - **Poppler** (`pdftoppm`) — PDF→image conversion. Install: `brew install poppler`
 
-### Pre-QA verification
+### If visual QA tools are missing
 
-Before running any QA commands, verify tools are available:
-
-```bash
-python3 -m markitdown --help >/dev/null 2>&1 || echo "MISSING: pip install 'markitdown[pptx]'"
-command -v soffice >/dev/null 2>&1 || echo "MISSING: brew install --cask libreoffice"
-command -v pdftoppm >/dev/null 2>&1 || echo "MISSING: brew install poppler"
-```
-
-If visual QA tools are missing, tell the user and offer to QA by opening the .pptx directly.
+Tell the user and offer to QA by opening the .pptx directly. **Do not skip QA.** At minimum, run content QA (Phase 1) — it needs only markitdown and catches the most common failures.
