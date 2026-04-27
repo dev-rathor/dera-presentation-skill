@@ -30,14 +30,29 @@ python3 -m markitdown output.pptx
 
 ## Phase 2: Visual QA
 
-**⚠️ USE SUBAGENTS** — even for 2-3 slides. You've been staring at the code and will see what you expect, not what's there. Subagents have fresh eyes.
+### Gate check — can you run visual QA?
+
+Before converting, verify the tools exist:
+
+```bash
+command -v soffice >/dev/null 2>&1 && echo "SOFFICE: OK" || echo "SOFFICE: MISSING"
+command -v pdftoppm >/dev/null 2>&1 && echo "PDFTOPPM: OK" || echo "PDFTOPPM: MISSING"
+```
+
+**If either is MISSING:** Stop here. Tell the user visual QA cannot run and why. Do not silently skip to delivery. The delivery gate will record `Visual QA: SKIPPED — [tool] not installed`.
+
+**If both are OK:** Proceed.
 
 ### Convert to images
+
+**⚠️ USE SUBAGENTS** — even for 2-3 slides. You've been staring at the code and will see what you expect, not what's there. Subagents have fresh eyes.
 
 ```bash
 python3 "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
+
+**If conversion fails** (non-zero exit, no output files): Stop and tell the user. Do not silently skip. Common causes: LibreOffice headless crash, corrupt .pptx, missing fonts.
 
 ### Subagent prompt
 
@@ -107,4 +122,4 @@ Be harsh. Report ALL issues, even minor ones.
 
 ### If visual QA tools are missing
 
-Tell the user and offer to QA by opening the .pptx directly. **Do not skip QA.** At minimum, run content QA (Phase 1) — it needs only markitdown and catches the most common failures.
+The Phase 2 gate check handles this — you should have already told the user in Step 0 and again at the gate check. **Do not skip QA entirely.** Content QA (Phase 1) needs only markitdown and catches the most common failures. The delivery gate in SKILL.md must show `Visual QA: SKIPPED` with the reason.

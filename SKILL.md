@@ -8,11 +8,12 @@ Dont make boring slides. Make insights pop with clear action titles, varied layo
 ## Workflow
 
 ```
-0. DEPENDENCIES → Verify & install all required tools BEFORE anything else
-1. STRATEGY     → Read styling.md, detect mode, draft ghost deck with action titles and layout
-2. BRAINSTORM   → Discuss with user, share your thoughts and take user feedback on the ghost deck
-3. EXECUTE      → Generate via pptxgenjs (see pptxgenjs.md)
-4. QA           → Visual inspection via subagent (see qa.md)
+0. DEPENDENCIES    → Verify & install all required tools BEFORE anything else
+1. STRATEGY        → Read styling.md, detect mode, draft ghost deck with action titles and layout
+2. BRAINSTORM      → Discuss with user, share your thoughts and take user feedback on the ghost deck
+3. EXECUTE         → Generate via pptxgenjs (see pptxgenjs.md)
+4. QA              → Visual inspection via subagent (see qa.md)
+5. DELIVERY GATE   → Print QA STATUS block — no silent delivery allowed
 ```
 
 ---
@@ -25,7 +26,13 @@ SKILL_DIR="$PROJECT_ROOT/.claude/skills/dera-presentation"
 bash "$SKILL_DIR/scripts/check_deps.sh"
 ```
 
-The script checks Node.js, pptxgenjs, react-icons, sharp, markitdown, LibreOffice, and poppler. It prints PASS/FAIL for each and exits non-zero if any required dependency is missing. If it reports a blocker, fix it before continuing. Warnings (QA tools) are non-blocking.
+The script checks Node.js, pptxgenjs, react-icons, sharp, markitdown, LibreOffice, and poppler. It prints PASS/FAIL for each and exits non-zero if any required dependency is missing. If it reports a blocker, fix it before continuing.
+
+**QA tool check** — If LibreOffice or poppler are missing, set `VISUAL_QA_AVAILABLE=false` and immediately tell the user:
+
+> "Visual QA tools (LibreOffice/poppler) are not installed. I can generate slides but cannot visually inspect them. Install with `brew install --cask libreoffice && brew install poppler`, or I'll deliver without visual QA — you'll need to review the .pptx yourself."
+
+**Record this.** You will need it at the delivery gate.
 
 **NODE_PATH**: When using the project's `node_modules`, run scripts from the project root and `require()` resolves automatically. For global packages: `NODE_PATH="$(npm root -g)" node generate_slides.js`
 
@@ -188,28 +195,52 @@ pres.writeFile({ fileName: "output.pptx" });
 
 Read [qa.md](qa.md) for the full process.
 
-### Phase 1: Content QA
+### Phase 1: Content QA (MANDATORY — always runs)
 
 ```bash
 python3 -m markitdown output.pptx
 ```
 
-Check extracted text against the ghost deck table: slide count, titles match, layout types match, no placeholder text, no missing content.
+Check extracted text against the ghost deck table: slide count, titles match, layout types match, no placeholder text, no missing content. **If any check fails, fix before Phase 2.**
 
-### Phase 2: Visual QA
+### Phase 2: Visual QA (MANDATORY — or explain why not)
+
+**If visual QA tools are available:**
 
 ```bash
 python3 "$SKILL_DIR/scripts/office/soffice.py" --headless --convert-to pdf output.pptx
 pdftoppm -jpeg -r 150 output.pdf slide
 ```
 
-Delegate to subagent with the **ghost deck table included** in the prompt. The subagent checks each slide against 9 criteria: title, layout, variety, visual element, canvas fill, text size, contrast, overlap, alignment.
+If either command fails, **stop and tell the user**. Do not silently skip.
+
+If conversion succeeds, delegate to subagent with the **ghost deck table included** in the prompt. The subagent checks each slide against 9 criteria: title, layout, variety, visual element, canvas fill, text size, contrast, overlap, alignment.
+
+**If visual QA tools are NOT available** (flagged in Step 0): skip to the delivery gate — you already told the user in Step 0.
 
 ### Phase 3: Fix and Verify
 
 Fix flagged issues → re-render → re-inspect. Max 3 cycles. Disclose any remaining issues.
 
-**Do not deliver until QA passes or issues are disclosed.**
+---
+
+## Delivery Gate (MANDATORY — run before handing over the file)
+
+**You MUST include this block in your response before delivering the .pptx:**
+
+```
+QA STATUS:
+- Content QA (Phase 1): PASS / FAIL — [one-line summary]
+- Visual QA (Phase 2):  PASS / FAIL / SKIPPED — [one-line summary]
+- Fix cycles completed:  [number]
+- Open issues: [list, or "none"]
+```
+
+**Rules:**
+- If Content QA was not run → you cannot deliver. Go back and run it.
+- If Visual QA was skipped → state why (tools missing / conversion failed). The user must see this.
+- If Visual QA failed and you hit the 3-cycle max → list remaining issues explicitly.
+- **Never deliver a .pptx without this block.** Silent delivery = failed workflow.
 
 ---
 
